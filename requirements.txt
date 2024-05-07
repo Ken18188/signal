@@ -16,7 +16,7 @@ cytoolz==0.12.3
 dateparser==1.0.0
 distlib==0.3.8
 ecdsa==0.16.0
-eth-account==0.11.2
+eth-account>=0.4.0,<0.6.0
 eth-hash==0.7.0
 eth-keyfile==0.8.1
 eth-keys==0.5.1
