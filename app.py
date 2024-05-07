@@ -4,6 +4,8 @@ from apexpro.constants import APEX_HTTP_MAIN, NETWORKID_MAIN
 from flask import Flask
 import os
 
+const port = 3000
+
 app = Flask(__name__)
 
 @app.route('/')
