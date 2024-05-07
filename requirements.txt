@@ -60,7 +60,7 @@ pyperclip==1.8.2
 PyRect==0.2.0
 PyScreeze==0.1.30
 pytest==4.6.11
-python-dateutil==2.9.0.post0
+python-dateutil==3.10.7
 pytweening==1.2.0
 pytz==2024.1
 pyunormalize==15.1.0
