@@ -62,7 +62,6 @@ pytest==4.6.11
 pytweening==1.2.0
 pytz==2024.1
 pyunormalize==15.1.0
-pywin32==306
 referencing==0.35.1
 regex==2024.4.28
 requests==2.31.0
