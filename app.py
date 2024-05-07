@@ -13,6 +13,7 @@ def hello_world():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Default port or 'PORT' from env
+    print(f"Starting server on port {port}")  # This will log the port number
     app.run(host='0.0.0.0', port=port)
 
 def get_balance():
