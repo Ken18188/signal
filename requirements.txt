@@ -1,5 +1,5 @@
 apexpro==1.2.0
 Flask==3.0.3
-python-dateutil==3.11
+python-dateutil==3.8.2.post
 
 
