@@ -1,22 +1,18 @@
-from apexpro.http_private import HttpPrivate
-from apexpro.constants import APEX_HTTP_MAIN, NETWORKID_MAIN
+from apexpro.constants import APEX_HTTP_TEST, APEX_HTTP_MAIN
+from apexpro.http_public import HttpPublic
 
-from flask import Flask
-import os
+client = HttpPublic(APEX_HTTP_MAIN)
+print(client.configs_v2())
+print(client.history_funding_v2(symbol="BTC-USDT"))
+print(client.klines(symbol="ETHUSDT",interval=5,start=1681463600, end=1681563600, limit=5))
+print(client.server_time())
+print(client.depth(symbol="BTC-USDC"))
+print(client.trades(symbol="BTC-USDC"))
+print(client.klines(symbol="BTC-USDT",interval="15"))
+print(client.ticker(symbol="BTC-USDT"))
+print(client.history_funding(symbol="BTC-USDT"))
 
-
-app = Flask(__name__)
-
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
-
-
-def get_balance():
-    key = '9a8408c6-4292-5513-cb1c-20fcbc4c8077'
-    secret = 'QSs6JH3NjLbMsXLP-gl32uDNkE_-QCEKICso4boo'
-    passphrase = 'a32muWF4n8RAmLN7JpSq'
-    client = HttpPrivate(APEX_HTTP_MAIN, network_id=NETWORKID_MAIN, api_key_credentials={'key': key, 'secret': secret, 'passphrase': passphrase})
-    accountRes = client.get_account_balance()
-    return str(accountRes)
+print(client.depth(symbol="ETH-USDT",limit=50))
+print(client.trades(symbol="ETH-USDT",limit=50))
+print(client.klines(symbol="ETH-USDT",interval="15"))
+print(client.history_funding_v2(symbol="ETH-USDT",limit=100,page=0,beginTimeInclusive=1662348573000,endTimeExclusive=1662434973000))
