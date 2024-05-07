@@ -59,7 +59,7 @@ pyperclip
 PyRect
 PyScreeze
 pytest
-python
+python<=3.10
 pytweening
 pytz
 pyunormalize
