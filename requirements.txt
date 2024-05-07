@@ -85,5 +85,5 @@ web3<=6.0.0,>5.0.0
 websocket-client
 websockets
 Werkzeug==3.0.2
-yarl==
+yarl
 zipp==3.18.1
