@@ -59,7 +59,7 @@ pyperclip
 PyRect
 PyScreeze
 pytest
-python==3.8
+python==3.8.19
 pytweening
 pytz
 pyunormalize
