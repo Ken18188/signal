@@ -59,7 +59,6 @@ pyperclip
 PyRect
 PyScreeze
 pytest
-python>=3.6, <=3.9
 pytweening
 pytz
 pyunormalize
