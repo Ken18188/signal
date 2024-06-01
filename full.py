@@ -2,7 +2,8 @@ import os
 import sys
 import time
 from flask import Flask, request, jsonify
-from apexpro import HTTP as HttpPrivateStark
+
+from apexpro.http_private_stark_key_sign import HttpPrivateStark
 from apexpro.constants import APEX_HTTP_TEST, NETWORKID_TEST, APEX_HTTP_MAIN, NETWORKID_MAIN
 from apexpro.http_public import HttpPublic
 
