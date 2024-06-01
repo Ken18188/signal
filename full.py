@@ -14,13 +14,12 @@ from apexpro.http_public import HttpPublic
 app = Flask(__name__)
 
 # API credentials
-key = '7d1e88d0-fc4c-332a-1e11-b774deed7309'
-secret = 'USXjNlzihsRQFlmsgQKPMEXZQ9Oq7FyNoYf7Az69'
-passphrase = 'SJTvx38yhMQ9piKmMWjp'
-
-public_key = '0x06af05d2e4cfeaaa50d555e23ab90ee574bfcd3c415ca6884495fe542a182a3c'
-public_key_y_coordinate = '0x047f6cbb00a509fb717d0596c26bf93d29abab2a3360a7c37942dfd9bc86137b'
-private_key = '0x02fb8240493fbe24db7cc87d8d4f5e170c93c277624b51399b0da9b56bfacd7a'
+key = os.getenv('API_KEY')
+secret = os.getenv('API_SECRET')
+passphrase = os.getenv('API_PASSPHRASE')
+public_key = os.getenv('STARK_PUBLIC_KEY')
+public_key_y_coordinate = os.getenv('STARK_PUBLIC_KEY_Y_COORDINATE')
+private_key = os.getenv('STARK_PRIVATE_KEY')
 
 client = HttpPrivateStark(APEX_HTTP_MAIN, network_id=NETWORKID_MAIN,
                           stark_public_key=public_key,
