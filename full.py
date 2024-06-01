@@ -3,7 +3,7 @@ import sys
 import time
 from flask import Flask, request, jsonify
 
-from apexpro.http_private_stark_key_sign import HttpPrivateStark
+from apexpro.http_private import HTTP
 from apexpro.constants import APEX_HTTP_TEST, NETWORKID_TEST, APEX_HTTP_MAIN, NETWORKID_MAIN
 from apexpro.http_public import HttpPublic
 
@@ -20,7 +20,7 @@ private_key = os.getenv('STARK_PRIVATE_KEY')
 if not all([key, secret, passphrase, public_key, public_key_y_coordinate, private_key]):
     raise ValueError("One or more environment variables are not set. Check your .env file and Render environment variables.")
 
-client = HttpPrivateStark(
+client = HTTP(
     APEX_HTTP_MAIN,
     network_id=NETWORKID_MAIN,
     stark_public_key=public_key,
