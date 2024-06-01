@@ -68,4 +68,32 @@ def trade():
             raise ValueError(f"Unexpected response format: {worstPrice}")
         price = worstPrice['data']['worstPrice']
 
-        createOrderRes = client.create_order(symbol="MA
+        createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
+                                             type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
+                                             expirationEpochSeconds=currentTime)
+        
+        if createOrderRes.get('data', {}).get('status') == 'PENDING':
+            entry_price = float(createOrderRes['data']['price'])
+            stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
+            stopLimitOrderRes = client.create_order(
+                symbol="MATIC-USDC",
+                side=stop_side,
+                type="STOP_LIMIT",
+                size=alert_size,
+                expirationEpochSeconds=currentTime + 86400,  # 1 day in the future
+                price=stop_price,
+                limitFeeRate=limitFeeRate,
+                triggerPriceType="INDEX",
+                triggerPrice=trigger_price
+            )
+            print("Stop Limit Order Response:", stopLimitOrderRes)
+
+        print(createOrderRes)
+        return jsonify(createOrderRes)
+    except Exception as e:
+        print("Error occurred:", e)
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)
