@@ -47,7 +47,6 @@ protobuf==3.19.5
 py==1.11.0
 pycryptodome==3.20.0
 pytest==4.6.11
-python==3.9
 pytz==2024.1
 referencing==0.35.1
 regex==2024.5.15
