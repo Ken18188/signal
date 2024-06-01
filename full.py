@@ -65,8 +65,8 @@ def trade():
         print("Account Info:", account_info)  # Debugging statement to print account info
 
         # Extracting takerFeeRate from the account_info
-        if 'data' in account_info and 'takerFeeRate' in account_info['data']:
-            limitFeeRate = account_info['data']['takerFeeRate']
+        if 'takerFeeRate' in account_info:
+            limitFeeRate = account_info['takerFeeRate']
         else:
             raise ValueError("takerFeeRate not found in account info")
 
