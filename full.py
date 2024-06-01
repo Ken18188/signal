@@ -12,6 +12,14 @@ public_key = os.getenv('STARK_PUBLIC_KEY')
 public_key_y_coordinate = os.getenv('STARK_PUBLIC_KEY_Y_COORDINATE')
 private_key = os.getenv('STARK_PRIVATE_KEY')
 
+# Debug print statements to check which variables are None
+print(f"API_KEY: {key}")
+print(f"API_SECRET: {secret}")
+print(f"API_PASSPHRASE: {passphrase}")
+print(f"STARK_PUBLIC_KEY: {public_key}")
+print(f"STARK_PUBLIC_KEY_Y_COORDINATE: {public_key_y_coordinate}")
+print(f"STARK_PRIVATE_KEY: {private_key}")
+
 if not all([key, secret, passphrase, public_key, public_key_y_coordinate, private_key]):
     raise ValueError("One or more environment variables are not set. Check your .env file and Render environment variables.")
 
