@@ -62,7 +62,8 @@ def trade():
 
         currentTime = time.time()
         account_info = client.get_account()  # Fetch account info to get the takerFeeRate
-        limitFeeRate = account_info['takerFeeRate']
+        print("Account Info:", account_info)  # Debugging statement to print account info
+        limitFeeRate = account_info['data']['takerFeeRate']
 
         worstPrice = client.get_worst_price(symbol="MATIC-USDC", side=alert_side, size=alert_size)
         if 'data' not in worstPrice:
