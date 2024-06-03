@@ -2,7 +2,6 @@ import os
 import sys
 import time
 from flask import Flask, request, jsonify
-from decimal import Decimal, getcontext, ConversionSyntax
 from apexpro.http_private_stark_key_sign import HttpPrivateStark
 
 root_path = os.path.abspath(__file__)
@@ -43,16 +42,16 @@ has_open_trade = False
 
 def calculate_stop_limit_params(entry_price, side):
     if side == "BUY":
-        trigger_price = Decimal(entry_price) * Decimal('0.97')
-        price = Decimal(trigger_price) * Decimal('0.9999')
+        trigger_price = entry_price * 0.97
+        price = trigger_price * 0.9999
         stop_side = "SELL"
     else:  # side == "SELL"
-        trigger_price = Decimal(entry_price) * Decimal('1.03')
-        price = Decimal(trigger_price) * Decimal('1.0001')
-        trigger_price = round(trigger_price, 4)
-        price = round(price, 4)
+        trigger_price = entry_price * 1.03
+        price = trigger_price * 1.0001
         stop_side = "BUY"
-    return stop_side, str(trigger_price), str(price)
+    trigger_price = format(trigger_price, '.4f')
+    price = format(price, '.4f')
+    return stop_side, trigger_price, price
 
 @app.route('/')
 def home():
@@ -67,11 +66,11 @@ def trade():
             return jsonify({'error': 'Invalid input data'}), 400
 
         alert_side = data['side'].upper()
-        alert_size = Decimal(data['size'])
+        alert_size = float(data['size'])
         alert_position = int(data['position'])
 
         currentTime = time.time()
-        limitFeeRate = Decimal(client.account['takerFeeRate'])
+        limitFeeRate = client.account['takerFeeRate']
 
         # Cancel the existing stop-limit order if it exists
         if stop_limit_order_id:
@@ -82,32 +81,31 @@ def trade():
         worstPrice = client.get_worst_price(symbol="MATIC-USDC", side=alert_side, size=alert_size)
         if 'data' not in worstPrice:
             raise ValueError(f"Unexpected response format: {worstPrice}")
-        price = Decimal(worstPrice['data']['worstPrice'])
+        price = float(worstPrice['data']['worstPrice'])
 
         # Check scenarios based on boolean and position
         if alert_position == 0:
             # Close existing trade
             has_open_trade = False
             createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
+                                                 type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
                                                  expirationEpochSeconds=currentTime + 86400)
         elif has_open_trade and alert_position != 0:
             # Close existing trade and open a new trade with double the size
             alert_size *= 2
             createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
+                                                 type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
                                                  expirationEpochSeconds=currentTime + 86400)
             has_open_trade = True
             alert_size /= 2  # Reset alert_size after the trade
 
             if createOrderRes.get('data'):
-                # Ensure the stop-limit order is placed after closing and opening the new trade
-                entry_price = Decimal(createOrderRes['data']['price'])
+                entry_price = float(createOrderRes['data']['price'])
                 stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
                 stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
-                                                        type="STOP_LIMIT", size=str(alert_size),
+                                                        type="STOP_LIMIT", size=alert_size,
                                                         expirationEpochSeconds=currentTime + 86400,
-                                                        price=stop_price, limitFeeRate=str(limitFeeRate),
+                                                        price=stop_price, limitFeeRate=limitFeeRate,
                                                         triggerPriceType="INDEX", triggerPrice=trigger_price)
                 print("Stop Limit Order Response:", stopLimitOrderRes)
                 if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
@@ -115,17 +113,17 @@ def trade():
         else:
             # Normal trade scenario
             createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
+                                                 type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
                                                  expirationEpochSeconds=currentTime + 86400)
             has_open_trade = True
 
             if createOrderRes.get('data'):
-                entry_price = Decimal(createOrderRes['data']['price'])
+                entry_price = float(createOrderRes['data']['price'])
                 stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
                 stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
-                                                        type="STOP_LIMIT", size=str(alert_size),
+                                                        type="STOP_LIMIT", size=alert_size,
                                                         expirationEpochSeconds=currentTime + 86400,
-                                                        price=stop_price, limitFeeRate=str(limitFeeRate),
+                                                        price=stop_price, limitFeeRate=limitFeeRate,
                                                         triggerPriceType="INDEX", triggerPrice=trigger_price)
                 print("Stop Limit Order Response:", stopLimitOrderRes)
                 if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
