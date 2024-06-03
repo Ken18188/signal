@@ -2,9 +2,9 @@ import os
 import sys
 import time
 from flask import Flask, request, jsonify
-from decimal import Decimal, InvalidOperation
-
+from decimal import Decimal, getcontext, ConversionSyntax
 from apexpro.http_private_stark_key_sign import HttpPrivateStark
+
 root_path = os.path.abspath(__file__)
 root_path = '/'.join(root_path.split('/')[:-2])
 sys.path.append(root_path)
@@ -14,11 +14,10 @@ from apexpro.http_public import HttpPublic
 
 app = Flask(__name__)
 
-# Load API credentials from environment variables
+# API credentials
 key = os.getenv('API_KEY')
 secret = os.getenv('API_SECRET')
 passphrase = os.getenv('API_PASSPHRASE')
-
 public_key = os.getenv('STARK_PUBLIC_KEY')
 public_key_y_coordinate = os.getenv('STARK_PUBLIC_KEY_Y_COORDINATE')
 private_key = os.getenv('STARK_PRIVATE_KEY')
@@ -38,23 +37,22 @@ for v in configs.get('data').get('perpetualContract', []):
         symbolData = v
         break
 
-# Variable to store stop-limit order ID and open trade state
+# Initialize a variable to store stop-limit order ID and open trade state
 stop_limit_order_id = None
 has_open_trade = False
 
 def calculate_stop_limit_params(entry_price, side):
-    entry_price = Decimal(entry_price)
     if side == "BUY":
-        trigger_price = entry_price * Decimal('0.97')
-        price = trigger_price * Decimal('0.9999')
+        trigger_price = Decimal(entry_price) * Decimal('0.97')
+        price = Decimal(trigger_price) * Decimal('0.9999')
         stop_side = "SELL"
     else:  # side == "SELL"
-        trigger_price = entry_price * Decimal('1.03')
-        price = trigger_price * Decimal('1.0001')
+        trigger_price = Decimal(entry_price) * Decimal('1.03')
+        price = Decimal(trigger_price) * Decimal('1.0001')
+        trigger_price = round(trigger_price, 4)
+        price = round(price, 4)
         stop_side = "BUY"
-    trigger_price = format(trigger_price, '.4f')
-    price = format(price, '.4f')
-    return stop_side, trigger_price, price
+    return stop_side, str(trigger_price), str(price)
 
 @app.route('/')
 def home():
@@ -69,11 +67,7 @@ def trade():
             return jsonify({'error': 'Invalid input data'}), 400
 
         alert_side = data['side'].upper()
-        try:
-            alert_size = Decimal(data['size'])
-        except InvalidOperation:
-            return jsonify({'error': 'Invalid size value'}), 400
-
+        alert_size = Decimal(data['size'])
         alert_position = int(data['position'])
 
         currentTime = time.time()
@@ -85,86 +79,55 @@ def trade():
             print("Delete Order Response:", deleteOrderRes)
             stop_limit_order_id = None
 
-        print(f"Before trade - has_open_trade: {has_open_trade}, alert_side: {alert_side}, alert_size: {alert_size}, alert_position: {alert_position}")
+        worstPrice = client.get_worst_price(symbol="MATIC-USDC", side=alert_side, size=alert_size)
+        if 'data' not in worstPrice:
+            raise ValueError(f"Unexpected response format: {worstPrice}")
+        price = Decimal(worstPrice['data']['worstPrice'])
 
-        # Condition 1: Signal with position 0 (close existing trade)
+        # Check scenarios based on boolean and position
         if alert_position == 0:
+            # Close existing trade
             has_open_trade = False
             createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=alert_size, limitFeeRate=limitFeeRate,
-                                                 expirationEpochSeconds=currentTime)
-            print("Close Order Response:", createOrderRes)
-
-        # Condition 2: Signal with position non-zero and has_open_trade is False
-        elif alert_position != 0 and not has_open_trade:
-            has_open_trade = True
-            worstPrice = client.get_worst_price(symbol="MATIC-USDC", side=alert_side, size=alert_size)
-            if 'data' not in worstPrice:
-                raise ValueError(f"Unexpected response format: {worstPrice}")
-            price = Decimal(worstPrice['data']['worstPrice'])
-
-            createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
+                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
                                                  expirationEpochSeconds=currentTime + 86400)
-            print("Market Order Response:", createOrderRes)
-
-            if createOrderRes.get('data'):
-                entry_price = Decimal(createOrderRes['data']['price'])
-                stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
-
-                stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
-                                                        type="STOP_LIMIT", size=alert_size,
-                                                        expirationEpochSeconds=currentTime + 86400,
-                                                        price=stop_price, limitFeeRate=limitFeeRate,
-                                                        triggerPriceType="INDEX", triggerPrice=trigger_price)
-                print("Stop Limit Order Response:", stopLimitOrderRes)
-
-                if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
-                    stop_limit_order_id = stopLimitOrderRes['data']['id']
-
-                return jsonify({"market_order": createOrderRes, "stop_limit_order": stopLimitOrderRes})
-
-        # Condition 3: Signal with position non-zero and has_open_trade is True
-        elif alert_position != 0 and has_open_trade:
-            opposite_side = "SELL" if alert_side == "BUY" else "BUY"
-            closeOrderRes = client.create_order(symbol="MATIC-USDC", side=opposite_side,
-                                                type="MARKET", size=alert_size * 2, limitFeeRate=limitFeeRate,
-                                                expirationEpochSeconds=currentTime)
-            print("Close Order Response:", closeOrderRes)
+        elif has_open_trade and alert_position != 0:
+            # Close existing trade and open a new trade with double the size
+            alert_size *= 2
+            createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
+                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
+                                                 expirationEpochSeconds=currentTime + 86400)
+            has_open_trade = True
+            alert_size /= 2  # Reset alert_size after the trade
+        else:
+            # Normal trade scenario
+            createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
+                                                 type="MARKET", size=str(alert_size), price=str(price), limitFeeRate=str(limitFeeRate),
+                                                 expirationEpochSeconds=currentTime + 86400)
             has_open_trade = True
 
-            worstPrice = client.get_worst_price(symbol="MATIC-USDC", side=alert_side, size=alert_size)
-            if 'data' not in worstPrice:
-                raise ValueError(f"Unexpected response format: {worstPrice}")
-            price = Decimal(worstPrice['data']['worstPrice'])
+        print("Market Order Response:", createOrderRes)
 
-            createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
-                                                 type="MARKET", size=alert_size, price=price, limitFeeRate=limitFeeRate,
-                                                 expirationEpochSeconds=currentTime + 86400)
-            print("Market Order Response:", createOrderRes)
+        if createOrderRes.get('data') and has_open_trade:
+            entry_price = Decimal(createOrderRes['data']['price'])
+            stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
+            stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
+                                                    type="STOP_LIMIT", size=str(alert_size),
+                                                    expirationEpochSeconds=currentTime + 86400,
+                                                    price=stop_price, limitFeeRate=str(limitFeeRate),
+                                                    triggerPriceType="INDEX", triggerPrice=trigger_price)
+            print("Stop Limit Order Response:", stopLimitOrderRes)
 
-            if createOrderRes.get('data'):
-                entry_price = Decimal(createOrderRes['data']['price'])
-                stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
+            if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
+                stop_limit_order_id = stopLimitOrderRes.get('data')['id']
 
-                stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
-                                                        type="STOP_LIMIT", size=alert_size,
-                                                        expirationEpochSeconds=currentTime + 86400,
-                                                        price=stop_price, limitFeeRate=limitFeeRate,
-                                                        triggerPriceType="INDEX", triggerPrice=trigger_price)
-                print("Stop Limit Order Response:", stopLimitOrderRes)
-
-                if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
-                    stop_limit_order_id = stopLimitOrderRes['data']['id']
-
-                return jsonify({"market_order": createOrderRes, "stop_limit_order": stopLimitOrderRes})
-
-        return jsonify({"market_order": createOrderRes})
+            return jsonify({"market_order": createOrderRes, "stop_limit_order": stopLimitOrderRes})
+        else:
+            return jsonify({"market_order": createOrderRes})
 
     except Exception as e:
         print("Error occurred:", e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=True, port=5000)
