@@ -99,6 +99,19 @@ def trade():
                                                  expirationEpochSeconds=currentTime + 86400)
             has_open_trade = True
             alert_size /= 2  # Reset alert_size after the trade
+
+            if createOrderRes.get('data'):
+                # Ensure the stop-limit order is placed after closing and opening the new trade
+                entry_price = Decimal(createOrderRes['data']['price'])
+                stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
+                stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
+                                                        type="STOP_LIMIT", size=str(alert_size),
+                                                        expirationEpochSeconds=currentTime + 86400,
+                                                        price=stop_price, limitFeeRate=str(limitFeeRate),
+                                                        triggerPriceType="INDEX", triggerPrice=trigger_price)
+                print("Stop Limit Order Response:", stopLimitOrderRes)
+                if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
+                    stop_limit_order_id = stopLimitOrderRes.get('data')['id']
         else:
             # Normal trade scenario
             createOrderRes = client.create_order(symbol="MATIC-USDC", side=alert_side,
@@ -106,24 +119,20 @@ def trade():
                                                  expirationEpochSeconds=currentTime + 86400)
             has_open_trade = True
 
+            if createOrderRes.get('data'):
+                entry_price = Decimal(createOrderRes['data']['price'])
+                stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
+                stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
+                                                        type="STOP_LIMIT", size=str(alert_size),
+                                                        expirationEpochSeconds=currentTime + 86400,
+                                                        price=stop_price, limitFeeRate=str(limitFeeRate),
+                                                        triggerPriceType="INDEX", triggerPrice=trigger_price)
+                print("Stop Limit Order Response:", stopLimitOrderRes)
+                if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
+                    stop_limit_order_id = stopLimitOrderRes.get('data')['id']
+
         print("Market Order Response:", createOrderRes)
-
-        if createOrderRes.get('data') and has_open_trade:
-            entry_price = Decimal(createOrderRes['data']['price'])
-            stop_side, trigger_price, stop_price = calculate_stop_limit_params(entry_price, alert_side)
-            stopLimitOrderRes = client.create_order(symbol="MATIC-USDC", side=stop_side,
-                                                    type="STOP_LIMIT", size=str(alert_size),
-                                                    expirationEpochSeconds=currentTime + 86400,
-                                                    price=stop_price, limitFeeRate=str(limitFeeRate),
-                                                    triggerPriceType="INDEX", triggerPrice=trigger_price)
-            print("Stop Limit Order Response:", stopLimitOrderRes)
-
-            if stopLimitOrderRes.get('data') and 'id' in stopLimitOrderRes['data']:
-                stop_limit_order_id = stopLimitOrderRes.get('data')['id']
-
-            return jsonify({"market_order": createOrderRes, "stop_limit_order": stopLimitOrderRes})
-        else:
-            return jsonify({"market_order": createOrderRes})
+        return jsonify({"market_order": createOrderRes, "stop_limit_order": stopLimitOrderRes})
 
     except Exception as e:
         print("Error occurred:", e)
