@@ -52,9 +52,9 @@ def calculate_stop_limit_params(entry_price, side):
         trigger_price = entry_price * Decimal('1.03')
         price = trigger_price * Decimal('1.0001')
         stop_side = "BUY"
-    trigger_price = trigger_price.quantize(Decimal('0.0001'))
-    price = price.quantize(Decimal('0.0001'))
-    return stop_side, str(trigger_price), str(price)
+    trigger_price = format(trigger_price, '.4f')
+    price = format(price, '.4f')
+    return stop_side, trigger_price, price
 
 @app.route('/')
 def home():
